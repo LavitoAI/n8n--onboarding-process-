@@ -1,0 +1,613 @@
+{
+  "name": "Employee Onboarding - Candidate Status Emails",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Candidate Status Update",
+        "formDescription": "Enter the candidate details and choose their status. The matching email is sent automatically.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Candidate Name",
+              "fieldName": "candidateName",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Candidate Email",
+              "fieldType": "email",
+              "fieldName": "candidateEmail",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Position",
+              "fieldName": "position",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Status",
+              "fieldType": "dropdown",
+              "fieldName": "status",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Under Review"
+                  },
+                  {
+                    "option": "Rejected"
+                  },
+                  {
+                    "option": "Offered"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Start Date (for offers)",
+              "fieldType": "date",
+              "fieldName": "startDate"
+            },
+            {
+              "fieldLabel": "Additional Notes",
+              "fieldType": "textarea",
+              "fieldName": "notes",
+              "placeholder": "Optional message included in the email"
+            }
+          ]
+        },
+        "options": {
+          "path": "candidate-status",
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Thanks! The candidate email has been sent."
+            }
+          }
+        }
+      },
+      "id": "c6bacc0f-8ee9-4810-b53b-a04c793bab2a",
+      "name": "Candidate Status Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        512,
+        -304
+      ],
+      "webhookId": "8c6aacf3-5892-43dd-8aa8-8b7239e79834"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "={{ $json.candidateEmail }}",
+        "subject": "Job offer - welcome aboard!",
+        "message": "=<p>Hi {{ $json.candidateName }},</p><p>Congratulations! We are delighted to offer you the <b>{{ $json.position }}</b> role.</p>{{ $json.startDate ? \"<p>Your proposed start date is <b>\" + $json.startDate + \"</b>.</p>\" : \"\" }}<p><b>Next steps for onboarding:</b></p><ul><li>Reply to confirm you accept the offer.</li><li>Send us your ID, banking details and tax information.</li><li>Watch for your welcome pack and first-day schedule.</li><li>Please also let us know your notice period</li></ul>{{ $json.notes ? \"<p>\" + $json.notes + \"</p>\" : \"\" }}<p>Welcome to the team!<br>The Hiring Team</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "04807111-e09c-4866-bea7-147e5a4483e7",
+      "name": "Send Offer & Onboarding Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        848,
+        96
+      ],
+      "webhookId": "0392243b-87b2-49c8-ac4e-d0247e93f562",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9lc0wMK2JMWhIgX9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=From: {{ $json.from.text }}\nSubject: {{ $json.subject }}\n\n{{ $json.text }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "candidateName",
+              "description": "Full name of the candidate who wrote the reply"
+            },
+            {
+              "name": "startDate",
+              "description": "The start date the candidate confirms or proposes, formatted YYYY-MM-DD. If they accept without naming a new date, use the proposed start date from the quoted offer email. Leave empty if no date can be found."
+            },
+            {
+              "name": "accepted",
+              "type": "boolean",
+              "description": "True if the candidate accepts the job offer"
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "=You read candidate replies to job offer emails. Today is {{ $now.toISODate() }}. Prefer what the candidate wrote in their own reply over the quoted original email. Only extract values that are present; never invent a date."
+        }
+      },
+      "id": "04bf81a5-45fb-492b-b584-a398cba70dfa",
+      "name": "Information Extractor",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        1072,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-date",
+              "leftValue": "={{ $json.output.startDate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9912f8e9-8f00-4972-af68-3371be008133",
+      "name": "Has Start Date?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $(\"Watch Offer Replies\").item.json.id }}"
+      },
+      "id": "afabd3ab-a2ab-4192-b25a-ca535dc1e605",
+      "name": "Mark Reply as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        512,
+        624
+      ],
+      "webhookId": "405d7dff-44f9-46e0-97e8-867016b0c611",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9lc0wMK2JMWhIgX9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload Candidate List",
+        "formDescription": "Upload an Excel (.xlsx) or CSV (.csv) file with one person per row. Use these column headers: Name, Email, Position, Status, Start Date, Notes. Status must be Under Review, Rejected or Offered.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Candidate Spreadsheet",
+              "fieldType": "file",
+              "fieldName": "spreadsheet",
+              "multipleFiles": false,
+              "acceptFileTypes": ".xlsx,.csv",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "path": "candidate-list-upload",
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Thanks! Emails are being sent to everyone in the spreadsheet."
+            }
+          }
+        }
+      },
+      "id": "8557b2ad-054a-4c54-8116-0cd6bbd5775c",
+      "name": "Candidate List Upload",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -656,
+        -224
+      ],
+      "webhookId": "5f3f35c0-fd74-4cb1-be35-13baf17e711f"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "csv",
+              "leftValue": "={{ (($binary.spreadsheet && ($binary.spreadsheet.fileName || $binary.spreadsheet.fileExtension)) || \"\").toLowerCase().endsWith(\"csv\") }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "47626962-a073-496b-b0de-5ff3114f9c74",
+      "name": "Is CSV File?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -400,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "spreadsheet",
+        "options": {
+          "enableBOM": true,
+          "headerRow": true
+        }
+      },
+      "id": "d41a0fd5-cfae-40a1-a768-56621d006380",
+      "name": "Read CSV File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        32,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "candidateName",
+              "type": "string",
+              "value": "={{ String($json[\"Name\"] ?? $json[\"Candidate Name\"] ?? [$json[\"First Name\"], $json[\"Last Name\"]].filter(Boolean).join(\" \")).trim() }}"
+            },
+            {
+              "id": "a2",
+              "name": "candidateEmail",
+              "type": "string",
+              "value": "={{ String($json[\"Email\"] ?? $json[\"Candidate Email\"] ?? \"\").trim() }}"
+            },
+            {
+              "id": "a3",
+              "name": "position",
+              "type": "string",
+              "value": "={{ String($json[\"Position\"] ?? $json[\"Job Title\"] ?? \"\").trim() }}"
+            },
+            {
+              "id": "a4",
+              "name": "status",
+              "type": "string",
+              "value": "={{ String($json[\"Status\"] ?? \"\").trim() }}"
+            },
+            {
+              "id": "a5",
+              "name": "startDate",
+              "type": "string",
+              "value": "={{ typeof $json[\"Start Date\"] === \"number\" ? DateTime.fromMillis(Math.round(($json[\"Start Date\"] - 25569) * 86400000), { zone: \"utc\" }).toISODate() : String($json[\"Start Date\"] ?? \"\").trim() }}"
+            },
+            {
+              "id": "a6",
+              "name": "notes",
+              "type": "string",
+              "value": "={{ String($json[\"Notes\"] ?? \"\").trim() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "59fe5d57-aa60-4ff7-8550-cc1a76559a52",
+      "name": "Map Spreadsheet Columns",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        48,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "offered",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Offered",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a0c693c7-c084-4580-9c23-224d3c9d4397",
+      "name": "Only Offered Candidates",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "spreadsheet",
+        "options": {
+          "headerRow": true
+        }
+      },
+      "id": "00780446-2c62-4309-a91c-9a1d2ce56ff8",
+      "name": "Read Excel File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        -176,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "lavitoai@gmail.com",
+          "mode": "list",
+          "cachedResultName": "lavitoai@gmail.com"
+        },
+        "options": {}
+      },
+      "id": "18907788-1409-4642-a97f-ec0af9f7b9c3",
+      "name": "Get availability in a calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        624
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "3dtNzdop1h5bD2BD",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        704,
+        864
+      ],
+      "id": "106064db-09c0-46e7-850e-5fdf10f3290f",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Candidate Status Form": {
+      "main": [
+        [
+          {
+            "node": "Send Offer & Onboarding Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Has Start Date?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Start Date?": {
+      "main": [
+        [
+          {
+            "node": "Get availability in a calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Candidate List Upload": {
+      "main": [
+        [
+          {
+            "node": "Is CSV File?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is CSV File?": {
+      "main": [
+        [
+          {
+            "node": "Read CSV File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Excel File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CSV File": {
+      "main": [
+        [
+          {
+            "node": "Map Spreadsheet Columns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Spreadsheet Columns": {
+      "main": [
+        [
+          {
+            "node": "Only Offered Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only Offered Candidates": {
+      "main": [
+        [
+          {
+            "node": "Send Offer & Onboarding Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Excel File": {
+      "main": [
+        [
+          {
+            "node": "Map Spreadsheet Columns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Offer & Onboarding Email": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get availability in a calendar": {
+      "main": [
+        [
+          {
+            "node": "Mark Reply as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6aa78e8c-92a4-492f-b974-949584ed2def",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e9322fae281248fd4ca2c80d19aa6d9e1b8974806af7963ab3da509a282c13d1"
+  },
+  "nodeGroups": [
+    {
+      "id": "acf27997-a436-4aea-9138-70a0e03909cb",
+      "name": "Read candidate list",
+      "nodeIds": [
+        "47626962-a073-496b-b0de-5ff3114f9c74",
+        "d41a0fd5-cfae-40a1-a768-56621d006380",
+        "00780446-2c62-4309-a91c-9a1d2ce56ff8",
+        "59fe5d57-aa60-4ff7-8550-cc1a76559a52",
+        "a0c693c7-c084-4580-9c23-224d3c9d4397"
+      ],
+      "description": "Reads the uploaded Excel or CSV file and turns each row into one candidate with name, email, role, status, start date and notes"
+    },
+    {
+      "id": "4a49affe-a141-4bbb-851c-710f074bd809",
+      "name": "Schedule first day",
+      "nodeIds": [
+        "04bf81a5-45fb-492b-b584-a398cba70dfa",
+        "9912f8e9-8f00-4972-af68-3371be008133",
+        "18907788-1409-4642-a97f-ec0af9f7b9c3",
+        "afabd3ab-a2ab-4192-b25a-ca535dc1e605",
+        "106064db-09c0-46e7-850e-5fdf10f3290f"
+      ],
+      "description": "Reads each candidate reply, finds their start date and books an all-day event; replies with no date stay unread for you"
+    }
+  ],
+  "id": "QAVtCTNObX9PFwP4",
+  "tags": []
+}
